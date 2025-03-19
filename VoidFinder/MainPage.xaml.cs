@@ -1,9 +1,8 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Devices.Sensors;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.ApplicationModel;
-using System.Threading.Tasks;
+using VoidFinder.Services;
 
 namespace VoidFinder
 {
@@ -36,14 +35,21 @@ namespace VoidFinder
                     double latitude = location.Latitude;
                     double longitude = location.Longitude;
                     double altitude = location.Altitude ?? 0;
- 
+
                     LocationLabel.Text = $"Location: {latitude:F4}, {longitude:F4}, Alt: {altitude}m";
 
                     // Get current UTC time
                     DateTime utcNow = DateTime.UtcNow;
 
                     // Compute Darkest Sky
-                    var result = DarkSkyFinder.FindDarkestSky(latitude, longitude, altitude, utcNow);
+                    double skyBrightness = await DarkSkyFinder.EstimateSkyBrightnessAsync(latitude, longitude);
+                    Console.WriteLine($"Estimated sky brightness: {skyBrightness:F2} mag/arcsec²");
+
+                    var (darkLat, darkLon) = await DarkSkyFinder.FindDarkSkyLocationAsync(latitude, longitude, 50);
+                    Console.WriteLine($"Best dark-sky location within 50km: {darkLat:F4}, {darkLon:F4}");
+
+                    // Convert to RA/DEC using time and observer's latitude
+                    var result = CelestialCoordinateFinder.ComputeRaDec(darkLat, darkLon, utcNow);
 
                     if (result.azimuth != -1)
                     {
@@ -64,6 +70,23 @@ namespace VoidFinder
             {
                 DarkSkyLabel.Text = $"Error: {ex.Message}";
             }
+        }
+    }
+
+    public static class CelestialCoordinateFinder
+    {
+        public static (double ra, double dec, double altitude, double azimuth) ComputeRaDec(double lat, double lon, DateTime utcNow)
+        {
+            // Simplified RA/DEC Calculation (Placeholder - Replace with precise astronomy library)
+            double siderealTime = (utcNow.TimeOfDay.TotalHours + lon / 15.0) % 24.0;
+            double ra = siderealTime;
+            double dec = lat; // Simplified for zenith approximation
+
+            // Compute Altitude & Azimuth (Assuming Observer's Position)
+            double altitude = 90 - Math.Abs(lat - dec);
+            double azimuth = (ra % 360) / 15.0 * 24.0;
+
+            return (ra, dec, altitude, azimuth);
         }
     }
 }
