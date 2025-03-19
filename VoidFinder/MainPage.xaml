@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VoidFinder.MainPage"
+             Title="Void Finder">
+
+    <VerticalStackLayout Padding="20">
+        <Label Text="Darkest Sky Finder" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
+        <Label x:Name="LocationLabel" Text="Fetching location..." FontSize="18" />
+        <Label x:Name="DarkSkyLabel" Text="Calculating..." FontSize="18" FontAttributes="Bold" />
+        <Button Text="Find Darkest Sky" Clicked="OnFindDarkSkyClicked" />
+    </VerticalStackLayout>
+
+</ContentPage>
