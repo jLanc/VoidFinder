@@ -16,47 +16,36 @@ namespace VoidFinder.Services
         /// </summary>
         public static async Task<double> GetElevationAsync(double latitude, double longitude)
         {
-            string apiKey = "YOUR_ELEVATION_API_KEY";  // Replace with your API key
+            //string apiKey = "YOUR_ELEVATION_API_KEY";  // Replace with your API key
             string url = $"https://api.open-elevation.com/api/v1/lookup?locations={latitude},{longitude}";
 
             HttpResponseMessage response = await client.GetAsync(url);
             string jsonResponse = await response.Content.ReadAsStringAsync();
 
             JObject data = JObject.Parse(jsonResponse);
-            return data["results"][0]["elevation"].Value<double>();
+            var results = data["results"];
+            if (results == null || !results.HasValues || results[0]?["elevation"] == null)
+            {
+                throw new InvalidOperationException("Invalid or missing elevation data in the API response.");
+            }
+            return results[0]["elevation"].Value<double>();
         }
 
         /// <summary>
-        /// Gets light pollution level at a given location from an API.
-        /// </summary>
-        public static async Task<double> GetLightPollutionFactorAsync(double latitude, double longitude)
-        {
-            string apiKey = "YOUR_LIGHT_POLLUTION_API_KEY";  // Replace with your API key
-            string url = $"https://api.lightpollutionmap.info/get?lat={latitude}&lon={longitude}&key={apiKey}";
-
-            HttpResponseMessage response = await client.GetAsync(url);
-            string jsonResponse = await response.Content.ReadAsStringAsync();
-
-            JObject data = JObject.Parse(jsonResponse);
-            return data["pollution_level"].Value<double>(); // Higher values mean more pollution
-        }
-
-        /// <summary>
-        /// Estimates sky brightness using real elevation and pollution data.
+        /// Estimates sky brightness using real elevation data, without considering light pollution.
         /// </summary>
         public static async Task<double> EstimateSkyBrightnessAsync(double latitude, double longitude)
         {
             double altitude = await GetElevationAsync(latitude, longitude);
-            double pollution = await GetLightPollutionFactorAsync(latitude, longitude);
 
-            double baseBrightness = 21.0;
-            double altitudeFactor = Math.Exp(-altitude / 2000.0);
+            double baseBrightness = 21.0;  // Base brightness in mag/arcsec²
+            double altitudeFactor = Math.Exp(-altitude / 2000.0);  // Factor to decrease brightness based on altitude
 
-            return baseBrightness - (pollution * altitudeFactor);
+            return baseBrightness - (altitudeFactor);  // Just altitude factor without pollution adjustment
         }
 
         /// <summary>
-        /// Finds the best dark-sky location within a given radius using real data.
+        /// Finds the best dark-sky location within a given radius using real data (without light pollution data).
         /// </summary>
         public static async Task<(double, double)> FindDarkSkyLocationAsync(double latitude, double longitude, double radiusKm)
         {
